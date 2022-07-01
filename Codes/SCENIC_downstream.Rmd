@@ -1,0 +1,280 @@
+---
+title: "Untitled"
+author: "Eric"
+date: "2021/5/5"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_knit$set(root.dir = "~/genomicdata/jiaoda/SCENIC")
+```
+
+```{r}
+library(pbapply)
+library(philentropy)
+library(ComplexHeatmap)
+```
+
+```{r}
+auc.seu<-readRDS("auc.seu.rds")
+rssMat <- readRDS("rssMat.rds")
+auc_mtx<-as.data.frame(t(as.matrix(GetAssayData(auc.seu,slot = "count"))))
+# auc_mtx<-read.csv("~/genomicdata/jiaoda/SCENIC/output/auc_mtx.csv",sep = ",")
+# colnames(auc_mtx)<-substr(colnames(auc_mtx),1,nchar(colnames(auc_mtx))-3)
+# rownames(auc_mtx)<-auc_mtx[,1]
+# auc_mtx <- auc_mtx[,-1]
+# auc_mtx <- auc_mtx[rownames(cell_info),]
+# saveRDS(auc.seu,"auc.seu.rds")
+rownames(rssMat)<-gsub("\\.","-",rownames(rssMat))
+```
+
+```{r}
+cell_info <- FetchData(auc.seu, vars = c("group","type","division","celltypes"))
+# # levels(cell_info$celltypes)[30]<-"delta Gamma T cells"
+# cell_info$ident <- cell_info$celltypes
+# cell_ident<-names(table(cell_info$ident))
+# cell_ident<-cell_ident[-c(5,26)]#celltype
+# # cell_ident<-cell_ident[-c(5,6,7,8,9,10,11)]#division
+# ctMat <- lapply(cell_ident, function(i) {
+#   as.numeric(cell_info$ident == i)
+# })
+# ctMat <- do.call(cbind, ctMat)
+# colnames(ctMat) <- cell_ident
+# rownames(ctMat) <- rownames(cell_info)
+# rssMat <- pblapply(colnames(auc_mtx), function(i){
+#   sapply(colnames(ctMat), function(j){
+#       1-JSD(rbind(auc_mtx[,i], ctMat[,j]), unit = "log2", est.prob = "empirical")
+#   })
+# })
+# rssMat <- do.call(rbind, rssMat)
+# rownames(rssMat) <- colnames(auc_mtx)
+# colnames(rssMat) <- colnames(ctMat)
+# rssMat <- as.data.frame(rssMat)
+# saveRDS(rssMat, file = "output/rssMat.rds")
+```
+
+```{r}
+# start heatmap from here
+avg_celltype <- read.csv(file = "output/avg_celltype.csv", header = T, row.names = 1)
+colnames(avg_celltype)[29]<-"delta Gamma T cells"
+gettopreg<-function(celltypes,k){
+  data<-rssMat[celltypes]
+  data<-dplyr::arrange(data,-data[,1])
+  top_reg<-rownames(data)[1:k]
+  return(top_reg)
+}
+
+typeHeatmap<-function(types){
+  typelist<-table(cell_info[cell_info$type==types,]$celltypes)
+  typelist<-rownames(typelist)[typelist>0]
+  reg<-sapply(typelist,function(i){
+    gettopreg(i,15)
+  })
+  reg<-as.vector(reg)
+  reg<-reg[!duplicated(reg)]
+  data<-avg_celltype[reg,typelist]
+  scaled.data<-t(scale(t(data)))
+  Heatmap(scaled.data,
+           color = colorRampPalette(colors = c("blue","white","red"))(100),
+          show_row_dend = F, show_column_dend = T, show_row_names = T,
+          column_names_rot = 20,column_names_centered = T)
+}
+
+##################
+  typelist<-table(cell_info[cell_info$division=="CD8+ T cells",]$celltypes)
+  typelist<-rownames(typelist)[typelist>0]
+  reg<-sapply(typelist,function(i){
+    gettopreg(i,10)
+  })
+  reg<-as.vector(reg)
+  reg<-reg[!duplicated(reg)]
+  data<-avg_celltype[reg,typelist]
+  scaled.data<-t(scale(t(data)))
+pdf("output/CD8T.pdf",width = 8,height = 10)
+  Heatmap(scaled.data,
+           color = colorRampPalette(colors = c("blue","white","red"))(100),
+          show_row_dend = F, show_column_dend = T, show_row_names = T,
+          column_names_rot = 20,column_names_centered = T)
+invisible(dev.off())
+
+##################
+  typelist<-table(cell_info[cell_info$type=="panT",]$division)
+  typelist<-rownames(typelist)[typelist>0]
+  reg<-sapply(typelist,function(i){
+    gettopreg(i,30)
+  })
+  reg<-as.vector(reg)
+  reg<-reg[!duplicated(reg)]
+  data<-avg_celltype[reg,typelist]
+  scaled.data<-t(scale(t(data)))
+  pdf("output/panT.pdf",width = 8,height = 10)
+  Heatmap(scaled.data,
+           color = colorRampPalette(colors = c("blue","white","red"))(100),
+          show_row_dend = F, show_column_dend = T, show_row_names = T,
+          column_names_rot = 20,column_names_centered = T)
+  invisible(dev.off())
+
+pdf("output/heatmap.pdf",width = 8,height = 10)
+Heatmap(scaled.avg_type,
+         color = colorRampPalette(colors = c("blue","white","red"))(100),
+         show_row_dend = F, show_column_dend = T, show_row_names = F,
+         column_names_rot = 20,column_names_centered = T,
+         height = 50, width = 20)
+typeHeatmap("B")
+typeHeatmap("epithelic")
+typeHeatmap("myeloid")
+typeHeatmap("panT")
+invisible(dev.off())
+##################
+  typelist<-table(cell_info[cell_info$type=="B",]$celltypes)
+  typelist<-rownames(typelist)[typelist>0]
+  reg<-sapply(typelist,function(i){
+    gettopreg(i,10)
+  })
+  reg<-as.vector(reg)
+  reg<-reg[!duplicated(reg)]
+  colnames(avg_celltype)[1:4]<-typelist
+  data<-avg_celltype[reg,typelist]
+  scaled.data<-t(scale(t(data)))
+  # scaled.data<-data
+##################
+  typelist<-table(cell_info[cell_info$type=="epithelic",]$celltypes)
+  typelist<-rownames(typelist)[typelist>0]
+  reg<-sapply(typelist,function(i){
+    gettopreg(i,10)
+  })
+  reg<-as.vector(reg)
+  reg<-reg[!duplicated(reg)]
+  colnames(avg_celltype)[11:20]<-typelist
+  data<-avg_celltype[reg,typelist]
+  scaled.data<-t(scale(t(data)))
+  # scaled.data<-data
+```
+
+```{r rearrangement}
+epi_order<- c("Epi-2","Epi-3","Epi-1","Transit amplifying cells","Goblet cells","Intermediate","BEST4+ colonocytes","Mature colonocytes","Tuft cells","Enteroendocrine cells")
+mye_order<-c("Anti-inflammatory macrophages","FCN1+ inflammatory macrophages","Conventional DCs","Plasmacytoid DCs")
+CD8T_order<-c("CD8+ Naïve","CD8+ Effecor-1","CD8+ Effecor-2","CD8+ Exhausted","CD8+ Cycling","CD8+ NKT")
+B_order <- c("Naïve mature B cells", "Memory B cells", "Plasmablasts", "IgA+ plasma cells")
+
+# scaled.data[,"rank"]<-match(max(scaled.data),scaled.data)
+# cal(scaled.data[1,]) 
+# order<-epi_order
+order <- B_order
+scaled.data<-scaled.data[,order]
+plot.data<-data.frame(scaled.data[,order],
+                      "rank"=c(apply(scaled.data,1,function(data){match(max(data),data)})),
+                      "index"=c(apply(scaled.data,1,function(data){match(max(data),data)})))
+plot.data<-split(plot.data,plot.data$rank)
+plot.data<-lapply(plot.data,function(x){x<-dplyr::arrange(x,-x[,unique(x$index)])})
+plot.data<-do.call(rbind,plot.data)
+plot.data<-plot.data[,-c(length(plot.data)-1,length(plot.data))]
+rownames(plot.data)<-t(data.frame(strsplit(rownames(plot.data),"\\.")))[,2]
+colnames(plot.data)<-order
+# colnames(plot.data)[1]<-"Naive mature B cells"
+# plot.data <- plot.data[-c(13,14,17),]
+
+Heatmap(plot.data,
+         color = colorRampPalette(colors = c("blue","white","red"))(100),
+         cluster_rows = F, cluster_columns = F,
+         column_names_rot = 20,column_names_centered = T,
+         height = 50, width = 20)
+```
+
+
+```{r}
+plot_process<-function(cell_type){
+  data <- rssMat[cell_type]
+  data <- arrange(data,-data[,1])
+  colnames(data) <- "rss"
+  data$rank <- seq(1,dim(data)[1])
+  data$col <- ifelse(data$rank<10, "Blue","grey")
+  data$label <- ifelse(data$rank<10, rownames(data), "")
+  plot <- ggplot(data, aes(x=rank, y=rss))+
+    geom_point(size=3, color = data$col)+
+    ggrepel::geom_text_repel(inherit.aes = FALSE, data = data, aes(rank, rss, label=label))+
+    ggtitle(paste0("RSS plot of ",cell_type))
+  return(plot)
+}
+
+pdf("RSSplot.pdf",height = 12, width = 8)
+for (i in cell_ident){
+  print(plot_process(i))
+}
+invisible(dev.off())
+```
+
+```{r}
+# biAUCmatrix <- readRDS("~/genomicdata/jiaoda/SCENIC/int/4.1_binaryRegulonActivity.Rds")
+# biAUCmatrix <- t(biAUCmatrix)
+# biAUCmatrix[,404]<-seurat$celltypes3
+# 
+# auc.binarization <- arrange(auc.binarization, auc.binarization[,416])
+# subauc.binarization <- auc.binarization[auc.binarization[,417] %in% c("CD8","Tumor"),]
+# bi.annot <- auc.binarization[,416]
+# auc.binarization <- auc.binarization[,1:415]
+# subbi.annot <- subauc.binarization[,416]
+# subauc.binarization <- subauc.binarization[,1:415]
+```
+
+```{r}
+auc.seu <- CreateSeuratObject(t(auc_mtx))
+auc.seu <- AddMetaData(auc.seu,cell_info)
+Idents(auc.seu) <- auc.seu$celltypes
+mtx<-as.matrix(AverageExpression(auc.seu,slot = "count")[[1]])
+write.csv(mtx,file = "average_auc.csv")
+```
+
+```{r}
+# load("~/genomicdata/jiaoda/seurat_Myeloid.Rdata")
+# regulonAUC <- readRDS("~/genomicdata/jiaoda/SCENIC/int/3.4_regulonAUC.Rds")
+# regulonAUC <- regulonAUC@assays@data$AUC
+all(colnames(seurat@assays$RNA@counts)==rownames(auc_mtx))
+alldata<-data.frame(seurat$celltypes,as.matrix(auc_mtx))
+subdata<-alldata[,c(1,420)]
+colnames(subdata)<-c("cell_type","auc")
+shapiro.test(subdata$auc[sample(c(1:18474),5000,replace = T)])
+bartlett.test(auc~cell_type,data = subdata)
+fit<-aov(auc~cell_type,data = subdata)
+summary(fit)
+kruskal.test(auc~cell_type,subdata)
+anova<-function(data){
+  result <- c(0,0,0,0,0)
+  colnames(data) <- c("cell_type","auc")
+  result[1] <- shapiro.test(data$auc[sample(c(1:18474),5000,replace = T)])$p.value
+  result[2] <- bartlett.test(auc~cell_type, data = data)$p.value
+  fit <- aov(auc~cell_type, data = data)
+  result[3] <- summary(fit)[[1]]$`Pr(>F)`[1]
+  result[4] <- kruskal.test(auc~cell_type,data)$p.value
+  result[5] <- as.numeric(kruskal.test(auc~cell_type,data)$parameter)
+  return(result)
+}
+
+data <- list()
+for (i in 1:dim(auc_mtx)[2]){
+  data[[i]] <- data.frame(seurat$Cell_type,as.matrix(auc_mtx)[,i])
+}
+result <- lapply(data,anova)
+result1 <- as.data.frame(do.call(rbind,result))
+rownames(result1)<-colnames(auc_mtx)
+# colnames(result1)<-c("正态性检验","方差齐性检验","方差分析","Kruskal-Wallis秩和检验")
+write.csv(result1,file = "方差分析.csv")
+```
+
+```{r}
+scaled.avg_celltype <- t(scale(t(avg_celltype)))
+scaled.avg_type<-t(scale(t(avg_type)))
+pdf("output/overview.pdf",width = 50,height = 40)
+Heatmap(scaled.avg_celltype,
+          color = colorRampPalette(colors = c("blue","white","red"))(100),
+         show_row_dend = F, show_column_dend = T, show_row_names = T,
+         column_names_rot = 20,column_names_centered = T,
+         height = 50, width = 20)
+
+invisible(dev.off())
+```
+```{r}
+
+```
+
