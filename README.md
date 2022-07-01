@@ -6,6 +6,6 @@ Codes for a single cell RNA sequencing data analysis
 **cellphoneDB.R**: Infer the cell-cell interaction using [cellphoneDB](https://github.com/Teichlab/cellphonedb) for a compare with CellChat.  
 **CIBERSORTx_survival.R**: Prepare the Input for [CIBERSORTx](https://cibersortx.stanford.edu/), and evaluate the prognostic value of cell fraction.  
 **inferCNV.R**: Infer the copy number variation using [InferCNV](https://github.com/broadinstitute/infercnv), and draw a heatmap and violin plot to show malignancy of each group.  
-**monocle.R**: Do trajectory analysis on CD8T subtypes, to check whether it exists a biological process along the trajectory.  
+**monocle.R**: Do trajectory analysis on CD8T subtypes using [monocle](http://cole-trapnell-lab.github.io/monocle-release/docs/), to check whether it exists a biological process along the trajectory.  
 **SCENIC**: Infer transciption factor activity using [SCENIC](https://pyscenic.readthedocs.io/en/latest/), and show the distribution of TFs AUCell scores.  
 **scMetabolism.R**: Infer the metabolism activity using [scMetabolism](https://github.com/wu-yc/scMetabolism), and draw a heatmap.
